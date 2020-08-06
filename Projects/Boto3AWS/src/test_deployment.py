@@ -1,5 +1,5 @@
-from ./ec2.vpc import VPC
-from ./ec2.ec2 import EC2
+from ec2.vpc import VPC
+from ec2.ec2 import EC2
 from client_locator import EC2Client
 
 def main():
@@ -12,7 +12,7 @@ def main():
     print("VPC Created: " + str(vpc_response))
     print("="*100)
 
-    # Add name tag to VPC
+    #Add name tag to VPC
     vpc_name = 'Boto3-VPC'
     vpc_id = vpc_response['Vpc']['VpcId']
     vpc.add_name_tag(vpc_id, vpc_name)
@@ -63,9 +63,9 @@ def main():
     print("="*100)
 
     #Add Name Tag to Private Subnet
-    vpc.add_name_tag(private_subnet_id, "Boto3-Private-Subnet+")
+    vpc.add_name_tag(private_subnet_id, "Boto3-Private-Subnet")
 
-    # EC2 Instances
+    #EC2 Instances
     ec2 = EC2(ec2_client)
 
     #Create a Key Pair
@@ -77,12 +77,12 @@ def main():
     #Create a Security Group
     public_security_group_name = "Boto3-Public-SG"
     public_security_group_description = "Public Security Group for Public Subnet Internet Access"
-    public_security_group_response = ec2.create_security_group(public_security_group_name, public_security_group_description)
+    public_security_group_response = ec2.create_security_group(public_security_group_name, public_security_group_description, vpc_id)
 
     public_security_group_id = public_security_group_response['GroupId']
     
     #Add Public Access to Security Group
-    vpc.add_inbound_rule_to_sg(public_security_group_id)
+    ec2.add_inbound_rule_to_sg(public_security_group_id)
 
     print("Added public access rule to Security Group " + public_security_group_name)
 
@@ -93,8 +93,25 @@ def main():
                 chkconfig httpd on
                 echo "<html><body><header>Hello from <b>Boto3</b> using <b>Python!</b></header></body></html>" > var/www/html/index.html
                 """
+    
+    ami_id = 'ami-067f5c3d5a99edc80'
 
+    #Launch a Public EC2 Instance
+    ec2.launch_ec2_instance(ami_id, key_pair_name, 1, 1, public_security_group_id, public_subnet_id, user_data)
 
+    print("Launching Public EC2 Instance with using AMI " + ami_id)
+
+    # Adding another security Group for Private EC2 Instance
+    private_security_group_name = "Boto3-Private-SG"
+    private_security_group_description = "Private Security Group for Private Subnet"
+    private_security_group_response = ec2.create_security_group(private_security_group_name, private_security_group_description, vpc_id)
+    private_security_group_id = private_security_group_response['GroupId']
+
+    # Add Rule to Private Security Group
+    ec2.add_inbound_rule_to_sg(private_security_group_id)
+
+    #Launch a Private EC2 Instance
+    ec2.launch_ec2_instance(ami_id, key_pair_name, 1, 1, private_security_group_id, private_subnet_id, """""")
 
     #BANNER
     print("\n\n")
